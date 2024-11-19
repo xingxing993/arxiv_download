@@ -13,7 +13,7 @@ def sanitize_filename(filename):
 
 def get_paper_title_from_arxiv(arxiv_id, proxies=None):
     """Retrieve paper title from arXiv using the arXiv API."""
-    print("Retrieving paper title from arXiv by ID {}...".format(arxiv_id))
+    print("Retrieving paper title from arXiv by ID \033[92m{}\033[0m...".format(arxiv_id))
     url = f"http://export.arxiv.org/api/query?id_list={arxiv_id}"
     response = requests.get(url, proxies=proxies)
     response.raise_for_status()  # Ensure we got a valid response
@@ -27,7 +27,7 @@ def get_paper_title_from_arxiv(arxiv_id, proxies=None):
         return None
     
     title = title_element.text.strip()
-    print("Paper title retrieved successfully.\n<{}>".format(title))
+    print("Paper title retrieved:\n\t\033[92m<{}>\033[0m".format(title))
     return title
 
 def download_pdf(arxiv_link=None, download_folder=None, proxies=None, filename_pattern="{arxiv_id} - {title}"):
@@ -102,6 +102,8 @@ def main():
 
     # Call download_pdf for each arXiv ID
     for arxiv_id in arxiv_ids:
+        if len(arxiv_id) != 1:
+            print(f"\033[93m[{arxiv_ids.index(arxiv_id)+1}/{len(arxiv_ids)}]\033[0m Downloading PDF for arXiv ID: \033[92m{arxiv_id}\033[0m")
         download_pdf(arxiv_link=f"https://arxiv.org/abs/{arxiv_id}", download_folder=args.folder, proxies=proxies, filename_pattern=filename_pattern)
 
 if __name__ == "__main__":
