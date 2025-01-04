@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 import argparse
 from tqdm import tqdm
 import configparser
+from bs4 import BeautifulSoup
 
 def sanitize_filename(filename):
     filename = re.sub(r'[\/:*?"<>|\n]', "-", filename)
@@ -72,10 +73,40 @@ def download_pdf(arxiv_link=None, download_folder=None, proxies=None, filename_p
     except requests.exceptions.RequestException as e:
         print(f"Failed to download PDF: {e}")
 
+
+def extract_arxiv_ids_from_url(weburl):
+    # Send a GET request to fetch the page content
+    response = requests.get(weburl)
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Parse the HTML content of the page using BeautifulSoup
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Define a regular expression pattern for matching Arxiv IDs
+        arxiv_pattern = re.compile(r'https://arxiv\.org/\w+/(\d+\.\d+)', re.IGNORECASE)
+        
+        # Search for all links that match the Arxiv URL pattern
+        arxiv_ids = set(re.findall(arxiv_pattern, soup.get_text()))
+
+        if arxiv_ids:
+            arxiv_ids_str = ', '.join(arxiv_ids)
+            print(f"ArXiv ID(s) found in the page: \033[92m{arxiv_ids_str}\033[0m")
+            return arxiv_ids_str
+        else:
+            print("\033[91mNo ArXiv ID found in the page.\033[0m")
+            return ""
+    else:
+        print(f"\033[91mFailed to fetch page: {response.status_code}\033[0m")
+        return ""
+
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Download PDF from arXiv link(s) or ID(s), use comma to separate multiple IDs")
-    parser.add_argument("-a", "--arxiv", required=True, help="arXiv link or ID to download the paper (comma separated for multiple IDs)")
+    parser = argparse.ArgumentParser(description="Download PDF from arXiv link(s) or ID(s) or web URL that contains arXiv link, use comma to separate multiple IDs")
+    parser.add_argument("-a", "--arxiv", required=True, help="arXiv IDs (comma separated for multiple IDs), arxiv links, any web URL that contains arxiv links")
     parser.add_argument("-f", "--folder", default=None, help="Folder to save the downloaded PDF (default: Downloads folder)")
+
 
     args = parser.parse_args()
 
@@ -93,6 +124,21 @@ def main():
     # Default download folder
     if args.folder is None:
         args.folder = config.get('Settings', 'default_download_folder', fallback=os.path.join(os.path.expanduser("~"), "Downloads"))
+    
+    # Check if the arXiv argument is a arxiv link or a web URL
+    if "arxiv.org" in args.arxiv:
+        # Extract arXiv ID from the arXiv link
+        arxiv_id = args.arxiv.split('/')[-1]
+        args.arxiv = arxiv_id
+    elif args.arxiv.startswith("http"):
+        # Extract arXiv IDs from the web URL
+        arxiv_ids = extract_arxiv_ids_from_url(args.arxiv)
+        if not arxiv_ids:
+            return
+        args.arxiv = arxiv_ids
+    else: # the argument must be a comma-separated list of arXiv IDs
+        pass
+
     
     # Filename pattern
     filename_pattern = config.get('Settings', 'filename_pattern', fallback="{arxiv_id} - {title}")
