@@ -16,3 +16,6 @@ Collect arXiv links in the URL page, and download
 ```
 arxiv https://mp.weixin.qq.com/s/1g__RdbcYAnO_eXiFHMl1g
 ```
+
+
+Modify the arxiv.cfg file to change modifications, self-explanatory
