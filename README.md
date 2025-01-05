@@ -4,8 +4,11 @@
 
 ### (./chrome_ext) Chrome(-like) browser extension
 Enable developer mode and load the folder to enable the extension.
-The extension by default collect all arXiv IDs from current page, download papers and rename according to use specified pattern.
-You can also manually specify the paper ID or link when necessary.
+
+The extension 
+- by default collect all arXiv IDs from current page, 
+- download papers and rename according to use specified pattern.
+- You can also manually specify the paper ID or link when necessary.
 
 
 
