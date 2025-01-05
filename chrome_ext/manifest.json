@@ -1,0 +1,25 @@
+{
+    "manifest_version": 3,
+    "name": "ArXiv PDF Downloader",
+    "version": "1.0",
+    "description": "Download PDFs from arXiv",
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": "arxiv_download.png"
+    },
+    "icons": {
+        "16": "arxiv_download.png",
+        "48": "arxiv_download.png",
+        "128": "arxiv_download.png"
+    },
+    "permissions": [
+        "downloads",
+        "tabs"
+    ],
+    "host_permissions": [
+        "<all_urls>"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    }
+}
