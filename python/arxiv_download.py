@@ -84,17 +84,17 @@ def extract_arxiv_ids_from_url(weburl):
         soup = BeautifulSoup(response.text, 'html.parser')
         
         # Define a regular expression pattern for matching Arxiv IDs
-        arxiv_pattern = re.compile(r'https://arxiv\.org/\w+/(\d+\.\d+)', re.IGNORECASE)
+        arxiv_pattern = re.compile(r'https?://arxiv\.org/\w+/(\d+\.\d+)', re.IGNORECASE)
         
         # Search for all links that match the Arxiv URL pattern
         arxiv_ids = set(re.findall(arxiv_pattern, soup.get_text()))
 
         if arxiv_ids:
             arxiv_ids_str = ', '.join(arxiv_ids)
-            print(f"ArXiv ID(s) found in the page: \033[92m{arxiv_ids_str}\033[0m")
+            print(f"arXiv ID(s) found in the page: \033[92m{arxiv_ids_str}\033[0m")
             return arxiv_ids_str
         else:
-            print("\033[91mNo ArXiv ID found in the page.\033[0m")
+            print("\033[91mNo arXiv ID found in the page.\033[0m")
             return ""
     else:
         print(f"\033[91mFailed to fetch page: {response.status_code}\033[0m")

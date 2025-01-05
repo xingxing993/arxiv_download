@@ -110,6 +110,15 @@ async function processInput(input) {
     // Show loading state
     displayExtractedIds(null);
     
+    // Check if input is a comma-separated list of arXiv IDs
+    if (!input.startsWith('http')) {
+        const potentialIds = input.split(/[, ]+/).filter(id => /^\d+\.\d+(?:v\d+)?$/.test(id));
+        if (potentialIds.length > 0) {
+            await displayExtractedIds(potentialIds);
+            return;
+        }
+    }
+    
     const ids = await extractArxivIds(input);
     await displayExtractedIds(ids);
 }
