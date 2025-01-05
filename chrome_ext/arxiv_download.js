@@ -66,44 +66,57 @@ async function downloadPdf(arxivLink, downloadFolder, proxies = null, filenamePa
     }
 }
 
-async function extractArxivIdsFromUrl(weburl) {
-    try {
-        const response = await fetch(weburl, {
-            method: 'GET',
-            mode: 'cors',
-            headers: {
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-            }
-        });
-        
-        if (!response.ok) {
-            console.error(`Failed to fetch page: ${response.status}`);
-            return "";
-        }
-        
-        const text = await response.text();
-        // Updated pattern to handle more URL formats
-        const arxivPattern = /(?:arxiv\.org\/(?:abs|pdf)\/|arxiv:\s*)(\d+\.\d+(?:v\d+)?)/gi;
-        const arxivIds = new Set([...text.matchAll(arxivPattern)].map(match => match[1]));
-        
-        if (arxivIds.size > 0) {
-            const arxivIdsStr = Array.from(arxivIds).join(', ');
-            console.log(`ArXiv ID(s) found in the page: ${arxivIdsStr}`);
-            return arxivIdsStr;
-        } else {
-            console.error("No ArXiv ID found in the page.");
-            return "";
-        }
-    } catch (error) {
-        console.error("Error fetching URL:", error);
-        // If CORS fails, we might need to use the background script
-        console.log("Attempting to fetch through background script...");
-        return await fetchThroughBackground(weburl);
+async function extractArxivIds(input) {
+    // If input is a direct arXiv ID
+    if (/^\d+\.\d+(?:v\d+)?$/.test(input)) {
+        return [input];
     }
+    
+    // If input is an arXiv URL
+    if (input.includes("arxiv.org")) {
+        const matches = input.match(/(\d+\.\d+(?:v\d+)?)/);
+        return matches ? [matches[1]] : [];
+    }
+    
+    // If input is a webpage URL
+    if (input.startsWith("http")) {
+        try {
+            const response = await fetch(input, {
+                method: 'GET',
+                mode: 'cors',
+                headers: {
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                }
+            });
+            
+            if (!response.ok) {
+                console.error(`Failed to fetch page: ${response.status}`);
+                return [];
+            }
+            
+            const text = await response.text();
+            const arxivPattern = /(?:arxiv\.org\/(?:abs|pdf)\/|arxiv:\s*)(\d+\.\d+(?:v\d+)?)/gi;
+            const arxivIds = [...new Set([...text.matchAll(arxivPattern)].map(match => match[1]))];
+            
+            if (arxivIds.length > 0) {
+                console.log(`ArXiv ID(s) found in the page:`, arxivIds);
+                return arxivIds;
+            } else {
+                console.error("No ArXiv ID found in the page.");
+                return [];
+            }
+        } catch (error) {
+            console.error("Error fetching URL:", error);
+            console.log("Attempting to fetch through background script...");
+            return await fetchThroughBackground(input);
+        }
+    }
+    
+    return [];
 }
 
-// Add this new function to handle fetching through the background script
+// Modify fetchThroughBackground to return array instead of string
 async function fetchThroughBackground(url) {
     return new Promise((resolve) => {
         chrome.runtime.sendMessage(
@@ -111,14 +124,10 @@ async function fetchThroughBackground(url) {
             response => {
                 if (response && response.content) {
                     const arxivPattern = /(?:arxiv\.org\/(?:abs|pdf)\/|arxiv:\s*)(\d+\.\d+(?:v\d+)?)/gi;
-                    const arxivIds = new Set([...response.content.matchAll(arxivPattern)].map(match => match[1]));
-                    if (arxivIds.size > 0) {
-                        resolve(Array.from(arxivIds).join(', '));
-                    } else {
-                        resolve("");
-                    }
+                    const arxivIds = [...new Set([...response.content.matchAll(arxivPattern)].map(match => match[1]))];
+                    resolve(arxivIds.length > 0 ? arxivIds : []);
                 } else {
-                    resolve("");
+                    resolve([]);
                 }
             }
         );
@@ -151,9 +160,9 @@ async function main(arxiv, folder = null, customFilenamePattern = null) {
         console.log('URL matches:', matches);
         arxivIds = matches ? [matches[1]] : [];
     } else if (arxiv.startsWith("http")) {
-        const extractedIds = await extractArxivIdsFromUrl(arxiv);
-        console.log('Extracted IDs string:', extractedIds);
-        arxivIds = extractedIds.split(', ').filter(id => id);
+        const extractedIds = await extractArxivIds(arxiv);
+        console.log('Extracted IDs:', extractedIds);
+        arxivIds = extractedIds;
     } else {
         arxivIds = arxiv.split(/[, ]+/).filter(id => /^\d+\.\d+(?:v\d+)?$/.test(id));
     }
