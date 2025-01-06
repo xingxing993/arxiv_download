@@ -5,6 +5,9 @@
 Video Guide:
 [Download or Watch Video](./_docs/arxiv_download.mp4)
 
+[![Video Guide](./_docs/youtube_coverpage.png)](https://www.youtube.com/watch?v=HTBQsFw5KWs)
+
+
 
 
 ### (./chrome_ext) Chrome(-like) browser extension
