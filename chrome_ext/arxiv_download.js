@@ -102,7 +102,7 @@ async function fetchFromActiveTab() {
             const results = await chrome.scripting.executeScript({
                 target: { tabId: tab.id },
                 func: () => {
-                    const arxivPattern = /(?:arxiv\.org\/(?:abs|pdf)\/|arxiv:\s*)(\d+\.\d+(?:v\d+)?)/gi;
+                    const arxivPattern = /(?:arxiv\.org\/(?:\w+)\/|arxiv:\s*)(\d+\.\d+(?:v\d+)?)/gi;
                     const matches = [...document.documentElement.innerHTML.matchAll(arxivPattern)];
                     return [...new Set(matches.map(match => match[1]))];
                 }
