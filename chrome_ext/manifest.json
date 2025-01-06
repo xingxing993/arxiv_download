@@ -1,25 +1,27 @@
 {
     "manifest_version": 3,
-    "name": "ArXiv PDF Downloader",
+    "name": "arXiv PDF Downloader",
     "version": "1.0",
-    "description": "Download PDFs from arXiv",
-    "action": {
-        "default_popup": "popup.html",
-        "default_icon": "arxiv_download.png"
-    },
-    "icons": {
-        "16": "arxiv_download.png",
-        "48": "arxiv_download.png",
-        "128": "arxiv_download.png"
-    },
+    "description": "Download PDFs from arXiv with customizable filenames",
     "permissions": [
+        "activeTab",
         "downloads",
-        "tabs"
+        "scripting"
     ],
     "host_permissions": [
-        "<all_urls>"
+        "https://arxiv.org/*",
+        "http://export.arxiv.org/*"
     ],
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "48": "arxiv_download.png"
+        }
+    },
     "background": {
         "service_worker": "background.js"
+    },
+    "icons": {
+        "48": "arxiv_download.png"
     }
 }

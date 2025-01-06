@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Get the current tab URL and process it immediately
     chrome.tabs.query({ active: true, currentWindow: true }, async function(tabs) {
         const currentTab = tabs[0];
+        // Always fill in the URL
         arxivInput.value = currentTab.url;
         await processInput(currentTab.url);
     });

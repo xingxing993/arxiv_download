@@ -80,24 +80,22 @@ async function extractArxivIds(input) {
     
     // If input is a webpage URL
     if (input.startsWith("http")) {
-        try {
-            const response = await fetch(input, {
-                method: 'GET',
-                mode: 'cors',
-                headers: {
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                }
-            });
-            
-            if (!response.ok) {
-                console.error(`Failed to fetch page: ${response.status}`);
+        // For non-arXiv URLs, we need to use the activeTab permission
+        if (!input.includes('arxiv.org')) {
+            try {
+                // Use the background script to get the page content
+                return await fetchThroughBackground(input);
+            } catch (error) {
+                console.error("Error fetching URL:", error);
                 return [];
             }
-            
-            const text = await response.text();
+        }
+        
+        // For arXiv URLs, proceed as normal
+        try {
+            const response = await fetch(input);
             const arxivPattern = /(?:arxiv\.org\/(?:abs|pdf)\/|arxiv:\s*)(\d+\.\d+(?:v\d+)?)/gi;
-            const arxivIds = [...new Set([...text.matchAll(arxivPattern)].map(match => match[1]))];
+            const arxivIds = [...new Set([...response.text().matchAll(arxivPattern)].map(match => match[1]))];
             
             if (arxivIds.length > 0) {
                 console.log(`ArXiv ID(s) found in the page:`, arxivIds);
@@ -107,9 +105,8 @@ async function extractArxivIds(input) {
                 return [];
             }
         } catch (error) {
-            console.error("Error fetching URL:", error);
-            console.log("Attempting to fetch through background script...");
-            return await fetchThroughBackground(input);
+            console.error("Error fetching arXiv URL:", error);
+            return [];
         }
     }
     
