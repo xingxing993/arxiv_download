@@ -2,10 +2,10 @@ function sanitizeFilename(filename) {
     return filename.replace(/[\/:*?"<>|\n]/g, "-").replace(/\s+/g, " ").trim();
 }
 
-async function getPaperTitleFromArxiv(arxivId, proxies = null) {
+async function getPaperTitleFromArxiv(arxivId) {
     console.log(`Retrieving paper title from arXiv by ID ${arxivId}...`);
     const url = `http://export.arxiv.org/api/query?id_list=${arxivId}`;
-    const response = await fetch(url, { method: 'GET', ...proxies });
+    const response = await fetch(url, { method: 'GET' });
     if (!response.ok) {
         console.error(`The arXiv ID ${arxivId} is not valid, please confirm...`);
         return null;
@@ -23,14 +23,14 @@ async function getPaperTitleFromArxiv(arxivId, proxies = null) {
     return title;
 }
 
-async function downloadPdf(arxivLink, downloadFolder, proxies = null, filenamePattern = "{arxiv_id} - {title}") {
+async function downloadPdf(arxivLink, downloadFolder, filenamePattern = "{arxiv_id} - {title}") {
     const arxivId = arxivLink.split('/').pop();
     console.log('arxivId:', arxivId);
     
     const pdfUrl = `https://arxiv.org/pdf/${arxivId}.pdf`;
     console.log('pdfUrl:', pdfUrl);
     
-    const title = await getPaperTitleFromArxiv(arxivId, proxies);
+    const title = await getPaperTitleFromArxiv(arxivId);
     console.log('title:', title);
     
     if (!title) return;
@@ -85,7 +85,7 @@ async function extractArxivIds(input) {
         
         // For non-arXiv URLs, fetch and parse content
         try {
-            return await fetchThroughBackground(input);
+            return await fetchFromActiveTab();
         } catch (error) {
             console.error("Error fetching URL:", error);
             return [];
@@ -95,7 +95,7 @@ async function extractArxivIds(input) {
     return [];
 }
 
-async function fetchThroughBackground(url) {
+async function fetchFromActiveTab() {
     return new Promise(async (resolve) => {
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -119,10 +119,6 @@ async function main(arxiv, folder = null, customFilenamePattern = null) {
     console.log('Input arxiv:', arxiv);
 
     const config = {
-        proxies: {
-            http: null,
-            https: null
-        },
         settings: {
             defaultDownloadFolder: "Downloads",
             filenamePattern: customFilenamePattern || "{arxiv_id} - {title}"
@@ -131,7 +127,6 @@ async function main(arxiv, folder = null, customFilenamePattern = null) {
 
     console.log('Config:', config);
 
-    const proxies = config.proxies;
     const downloadFolder = folder || config.settings.defaultDownloadFolder;
     const filenamePattern = customFilenamePattern || "{arxiv_id} - {title}";
 
@@ -158,6 +153,6 @@ async function main(arxiv, folder = null, customFilenamePattern = null) {
     for (const arxivId of arxivIds) {
         console.log(`Downloading PDF for arXiv ID: ${arxivId}`);
         console.log(`Using filename pattern: ${filenamePattern}`);
-        await downloadPdf(`https://arxiv.org/abs/${arxivId}`, downloadFolder, proxies, filenamePattern);
+        await downloadPdf(`https://arxiv.org/abs/${arxivId}`, downloadFolder, filenamePattern);
     }
 }
