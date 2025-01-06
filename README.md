@@ -3,7 +3,8 @@
 ## arXiv downloader
 
 Video Guide:
-https://user-images.githubusercontent.com/username/repo/_docs/arxiv_download.mp4
+[Download or Watch Video](./_docs/arxiv_download.mp4)
+
 
 
 ### (./chrome_ext) Chrome(-like) browser extension
