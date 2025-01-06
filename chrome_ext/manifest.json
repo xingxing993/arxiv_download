@@ -18,9 +18,6 @@
             "48": "arxiv_download.png"
         }
     },
-    "background": {
-        "service_worker": "background.js"
-    },
     "icons": {
         "48": "arxiv_download.png"
     }

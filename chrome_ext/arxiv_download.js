@@ -72,40 +72,22 @@ async function extractArxivIds(input) {
         return [input];
     }
     
-    // If input is an arXiv URL
-    if (input.includes("arxiv.org")) {
-        const matches = input.match(/(\d+\.\d+(?:v\d+)?)/);
-        return matches ? [matches[1]] : [];
-    }
-    
     // If input is a webpage URL
     if (input.startsWith("http")) {
-        // For non-arXiv URLs, we need to use the activeTab permission
-        if (!input.includes('arxiv.org')) {
-            try {
-                // Use the background script to get the page content
-                return await fetchThroughBackground(input);
-            } catch (error) {
-                console.error("Error fetching URL:", error);
-                return [];
+        // For arXiv URLs, extract ID from the end of URL
+        if (input.includes('arxiv.org')) { // NOTE: it must be a valid arxiv link when containing arxiv.org
+            const match = input.match(/(\d+\.\d+(?:v\d+)?)/i);
+            if (match) {
+                return [match[1]];
             }
+            return [];
         }
         
-        // For arXiv URLs, proceed as normal
+        // For non-arXiv URLs, fetch and parse content
         try {
-            const response = await fetch(input);
-            const arxivPattern = /(?:arxiv\.org\/(?:abs|pdf)\/|arxiv:\s*)(\d+\.\d+(?:v\d+)?)/gi;
-            const arxivIds = [...new Set([...response.text().matchAll(arxivPattern)].map(match => match[1]))];
-            
-            if (arxivIds.length > 0) {
-                console.log(`ArXiv ID(s) found in the page:`, arxivIds);
-                return arxivIds;
-            } else {
-                console.error("No ArXiv ID found in the page.");
-                return [];
-            }
+            return await fetchThroughBackground(input);
         } catch (error) {
-            console.error("Error fetching arXiv URL:", error);
+            console.error("Error fetching URL:", error);
             return [];
         }
     }
@@ -113,21 +95,23 @@ async function extractArxivIds(input) {
     return [];
 }
 
-// Modify fetchThroughBackground to return array instead of string
 async function fetchThroughBackground(url) {
-    return new Promise((resolve) => {
-        chrome.runtime.sendMessage(
-            { action: "fetchUrl", url: url },
-            response => {
-                if (response && response.content) {
+    return new Promise(async (resolve) => {
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            const results = await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                func: () => {
                     const arxivPattern = /(?:arxiv\.org\/(?:abs|pdf)\/|arxiv:\s*)(\d+\.\d+(?:v\d+)?)/gi;
-                    const arxivIds = [...new Set([...response.content.matchAll(arxivPattern)].map(match => match[1]))];
-                    resolve(arxivIds.length > 0 ? arxivIds : []);
-                } else {
-                    resolve([]);
+                    const matches = [...document.documentElement.innerHTML.matchAll(arxivPattern)];
+                    return [...new Set(matches.map(match => match[1]))];
                 }
-            }
-        );
+            });
+            resolve(results[0].result || []);
+        } catch (error) {
+            console.error('Error executing script:', error);
+            resolve([]);
+        }
     });
 }
 

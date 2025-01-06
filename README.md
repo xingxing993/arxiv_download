@@ -1,13 +1,8 @@
+# arXiv PDF Downloader Chrome Extension
 
+A Chrome extension to easily download PDFs from arXiv with customizable filenames.
 
 ## arXiv downloader
-
-Video Guide:
-[Download or Watch Video](./_docs/arxiv_download.mp4)
-
-[![Video Guide](./_docs/youtube_coverpage.png)](https://www.youtube.com/watch?v=HTBQsFw5KWs)
-
-
 
 
 ### (./chrome_ext) Chrome(-like) browser extension
@@ -17,6 +12,21 @@ The extension
 - by default collect all arXiv IDs from current page, 
 - download papers and rename according to use specified pattern.
 - You can also manually specify the paper ID or link when necessary.
+
+Video Guide:
+[Download or Watch Video](./_docs/arxiv_download.mp4)
+[![Video Guide](./_docs/youtube_coverpage.png)](https://www.youtube.com/watch?v=HTBQsFw5KWs)
+
+
+## Usage
+1. Click the extension icon on any webpage
+2. The extension will automatically:
+   - Fill in the URL of the current page
+   - Extract any arXiv IDs from the page
+   - Show paper titles for found IDs
+3. Select which papers to download
+4. Click "Download PDF" to get the selected papers
+
 
 
 
