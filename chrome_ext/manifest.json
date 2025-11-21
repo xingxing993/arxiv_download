@@ -10,6 +10,7 @@
     ],
     "host_permissions": [
         "https://arxiv.org/*",
+        "https://export.arxiv.org/*",
         "http://export.arxiv.org/*"
     ],
     "action": {

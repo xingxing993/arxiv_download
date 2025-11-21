@@ -4,23 +4,40 @@ function sanitizeFilename(filename) {
 
 async function getPaperTitleFromArxiv(arxivId) {
     console.log(`Retrieving paper title from arXiv by ID ${arxivId}...`);
-    const url = `http://export.arxiv.org/api/query?id_list=${arxivId}`;
-    const response = await fetch(url, { method: 'GET' });
-    if (!response.ok) {
-        console.error(`The arXiv ID ${arxivId} is not valid, please confirm...`);
-        return null;
-    }
-    const text = await response.text();
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(text, "text/xml");
-    const titleElement = xmlDoc.querySelector("entry > title");
-    if (!titleElement) {
-        console.error(`The arXiv ID ${arxivId} is not valid, please confirm...`);
-        return null;
-    }
-    const title = titleElement.textContent.trim();
-    console.log(`Paper title retrieved:\n\t<${title}>`);
-    return title;
+    const url = `https://export.arxiv.org/api/query?id_list=${arxivId}`;
+    
+    return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', url, true);
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                try {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(xhr.responseText, "text/xml");
+                    const titleElement = xmlDoc.querySelector("entry > title");
+                    if (!titleElement) {
+                        console.error(`The arXiv ID ${arxivId} is not valid, please confirm...`);
+                        resolve(null);
+                        return;
+                    }
+                    const title = titleElement.textContent.trim();
+                    console.log(`Paper title retrieved:\n\t<${title}>`);
+                    resolve(title);
+                } catch (error) {
+                    console.error(`Error parsing response for arXiv ID ${arxivId}:`, error);
+                    resolve(null);
+                }
+            } else {
+                console.error(`The arXiv ID ${arxivId} is not valid, HTTP status: ${xhr.status}`);
+                resolve(null);
+            }
+        };
+        xhr.onerror = function() {
+            console.error(`Network error while fetching arXiv ID ${arxivId}`);
+            resolve(null);
+        };
+        xhr.send();
+    });
 }
 
 async function downloadPdf(arxivLink, downloadFolder, filenamePattern = "{arxiv_id} - {title}") {
@@ -67,22 +84,20 @@ async function downloadPdf(arxivLink, downloadFolder, filenamePattern = "{arxiv_
 }
 
 async function extractArxivIds(input) {
+    // If input is a arxiv.org link
+    if (input.includes("arxiv.org") && /\d+\.\d+(?:v\d+)?/.test(input)) {
+        const arxivId = input.match(/\d+\.\d+(?:v\d+)?/)[0];
+        return [arxivId];
+    }
+
     // If input is a direct arXiv ID
-    if (/^\d+\.\d+(?:v\d+)?$/.test(input)) {
-        return [input];
+    const matches = input.match(/\d+\.\d+(?:v\d+)?/);
+    if (matches) {
+        return [matches[0]];
     }
     
-    // If input is a webpage URL
-    if (input.startsWith("http")) {
-        // For arXiv URLs, extract ID from the end of URL
-        if (input.includes('arxiv.org')) { // NOTE: it must be a valid arxiv link when containing arxiv.org
-            const match = input.match(/(\d+\.\d+(?:v\d+)?)/i);
-            if (match) {
-                return [match[1]];
-            }
-            return [];
-        }
-        
+    // If input is a URL (including local files)
+    if (input.startsWith("http") || input.startsWith("file:///")) {
         // For non-arXiv URLs, fetch and parse content
         try {
             return await fetchFromActiveTab();
@@ -95,15 +110,82 @@ async function extractArxivIds(input) {
     return [];
 }
 
+
 async function fetchFromActiveTab() {
     return new Promise(async (resolve) => {
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            console.log('Current tab:', tab);
+            // Check if current page is a PDF
+            const isPdf = tab.url.toLowerCase().endsWith('.pdf') || 
+                         tab.url.toLowerCase().includes('arxiv.org/pdf/') ||
+                         (tab.contentType && tab.contentType.toLowerCase() === 'application/pdf');
+            console.log('Processing tab:', {
+                url: tab.url,
+                isPdf: isPdf,
+                contentType: tab.contentType || 'unknown'
+            });
+            
+            if (isPdf) {
+                console.log('Trying to extract from PDF');
+                const results = await chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    func: async () => {
+                        console.log('Attempting to extract text content from PDF viewer...');
+                        
+                        // Define the getPdfContent function within the execution context
+                        async function getPdfContent() {
+                            const pdfViewer = document.querySelector('.textLayer');
+                            if (pdfViewer) {
+                                return pdfViewer.textContent;
+                            }
+                            
+                            const alternativeSelectors = [
+                                '#viewer', 
+                                '.pdfViewer', 
+                                '#viewerContainer' 
+                            ];
+                            
+                            for (const selector of alternativeSelectors) {
+                                const element = document.querySelector(selector);
+                                if (element) {
+                                    return element.textContent;
+                                }
+                            }
+                            return null;
+                        }
+
+                        // Call the function and return the content
+                        const content = await getPdfContent();
+                        console.log('PDF content retrieved:', {
+                            found: !!content,
+                            length: content?.length,
+                            preview: content?.substring(0, 200)
+                        });
+                        // inline arxiv pattern processing function
+                        const arxivPattern = /(?:arxiv\.org\/(?:\w+)\/|arxiv:[\s]*)(\d+\.\d+(?:v\d+)?)/gi;
+                        const matches = [...content.matchAll(arxivPattern)];
+                        return [...new Set(matches.map(match => match[1]))];
+                    }
+                });
+                resolve(results[0].result || []);
+                return;
+            }
+            
+            // For regular web pages
+            // Log tab info before processing
+            console.log('Processing regular webpage:', {
+                url: tab.url,
+                title: tab.title
+            });
             const results = await chrome.scripting.executeScript({
                 target: { tabId: tab.id },
                 func: () => {
+                    console.log('Executing script to parse arXiv IDs from content...');
+                    const content = document.documentElement.innerHTML;
+                    // inline arxiv pattern processing function
                     const arxivPattern = /(?:arxiv\.org\/(?:\w+)\/|arxiv:[\s]*)(\d+\.\d+(?:v\d+)?)/gi;
-                    const matches = [...document.documentElement.innerHTML.matchAll(arxivPattern)];
+                    const matches = [...content.matchAll(arxivPattern)];
                     return [...new Set(matches.map(match => match[1]))];
                 }
             });
