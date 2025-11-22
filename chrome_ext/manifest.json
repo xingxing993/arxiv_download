@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "arXiv PDF Downloader",
-    "version": "1.0",
+    "version": "1.2",
     "description": "Download PDFs from arXiv with customizable filenames",
     "permissions": [
         "activeTab",
